@@ -1,0 +1,9 @@
+{
+  "connections":{
+      "alborz_Leftovers":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;"}
+  ,
+  "tasks":[
+    {"connection":"alborz_Leftovers",
+      "exec":"primer.sql"}
+  ]
+}
