@@ -1,9 +1,15 @@
-{
-  "connections":{
-      "alborz_Leftovers":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;"}
-  ,
-  "tasks":[
-    {"connection":"alborz_Leftovers",
-      "exec":"primer.sql"}
-  ]
-}
+[
+    {"connection":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;",
+      "jobs":
+        [
+          {"exec": "get_params.sql", "output":["a","rv"]},
+          {"exec": "get_date.sql", "params":["a"], "to":"t_1"}
+        ]},
+    {"connection":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;",
+      "jobs":
+        [
+          {"from":"t_1", "into":"tt"},
+          {"exec":"commit.sql"}
+        ]
+      }
+]
