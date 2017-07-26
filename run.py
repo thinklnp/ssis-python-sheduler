@@ -27,8 +27,9 @@ def main():
         cfg = json.load(f_file)
     logger = Logger("some_name")
     try:
-        for o in cfg["tasks"]:
-            curs = pyodbc.connect(cfg["connections"][o["connection"]]).cursor()
+        for o in cfg:
+            curs = pyodbc.connect(o["connection"]).cursor()
+
             if "exec" in o:
                 logger.log(o["exec"])
                 with open(o["exec"]) as f_exec:
