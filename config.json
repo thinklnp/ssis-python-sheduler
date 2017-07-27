@@ -2,14 +2,14 @@
     {"connection":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;",
       "jobs":
         [
-          {"exec": "get_params.sql", "output":["a","rv"]},
-          {"exec": "get_date.sql", "params":["a"], "to":"t_1"}
+          {"exec_txt": "SELECT 10 a, 102 rv", "output":["a","rv"]},
+          {"exec_sql": "get_date.sql", "to":"t_1"}
         ]},
     {"connection":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;",
       "jobs":
         [
-          {"from":"t_1", "into":"tt"},
-          {"exec":"commit.sql"}
+          {"from":"t_1", "into":"#tt"},
+          {"exec_sql":"commit.sql"}
         ]
       }
 ]
