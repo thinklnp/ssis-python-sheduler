@@ -31,8 +31,22 @@ class Connection:
         self.jobs = o["jobs"]
         self.params = {}
 
-    def run_inner(self):
-        pass
+    def run_inner(self, sql_str):
+        try:
+            curs = self.conn.cursor()
+            curs.execute(sql_str)
+            rs = curs.fetchone()
+            res = {}
+            i = 0
+            if rs:
+                for r in curs.description:
+                    res.update({r[0]: rs[i]})
+                    i += 1
+            return rs
+        except Exception as e:
+            logger.error(e)
+            raise
+
 
     def run(self, w):
         if not self.jobs:
@@ -40,6 +54,7 @@ class Connection:
             self.is_wait = False
         else:
             j = self.jobs.pop(0)
+            res = {}
             if "to" in j:
                 wt = w.get(j["to"], (None,None))
                 w.update({j["to"]: (wt[0],self)})
@@ -49,23 +64,34 @@ class Connection:
                 w.update({j["from"]: (self, wt[1])})
                 self.is_wait = True
             else:
+                logger.log(str(j))
                 sql_str = ""
                 if "exec_sql" in j:
                     try:
                         sql_str = open(j["exec_sql"]).read()
                     except Exception as e:
                         logger.error(e)
+                        raise
                 elif "exec_str" in j:
                     sql_str = j["exec_str"]
                 try:
                     sql_str.format(**self.params)
                 except Exception as e:
                     logger.error(e)
-
+                    raise
+                if sql_str:
+                    res = self.run_inner(sql_str)
+                if "output" in j:
+                    for r, rn in res.items():
+                        if r in j["output"]:
+                            self.params = self.params.update({r: rn})
 
 
     def run_with(self, c2):
-        pass
+        j_from = self.jobs.pop(0)
+        j_to = self.jobs.pop(0)
+        if "into" in j_to:
+            
 
 
 def main():
@@ -102,6 +128,7 @@ def main():
         logger.end()
     except Exception as e:
         logger.error(e)
+        raise
 
 if __name__ == "__main__":
     main()
