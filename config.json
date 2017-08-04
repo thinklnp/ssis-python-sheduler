@@ -8,8 +8,7 @@
     {"connection":"DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;",
       "jobs":
         [
-          {"from":"t_1", "into":"#tt"},
-          {"exec_sql":"commit.sql"}
+          {"from":"t_1", "into":"dbo.tt"}
         ]
       }
 ]

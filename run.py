@@ -1,16 +1,21 @@
 import pyodbc
 import json
 
+
+def to_sql_str(s):
+    return "'"+str(s).replace("'","''")+"'"
+
+
 class Logger:
     def __init__(self, name):
         self.curs = pyodbc.connect("DRIVER={ODBC Driver 11 for SQL Server};SERVER=alborz;DATABASE=Leftovers;Trusted_Connection=yes;").cursor()
-        self.curs.execute("EXEC dbo.Plog_start '{name}'".format(name=name))
+        self.curs.execute("EXEC dbo.Plog_start {name}".format(name=to_sql_str(name)))
         row = self.curs.fetchone()
         self.curs.commit()
         self.id = row.id
 
     def log(self, descr):
-        self.curs.execute("EXEC dbo.Plog_log {id}, '{descr}'".format(id=self.id, descr=descr))
+        self.curs.execute("EXEC dbo.Plog_log {id}, {descr}".format(id=self.id, descr=to_sql_str(descr)))
         self.curs.commit()
 
     def end(self):
@@ -18,7 +23,7 @@ class Logger:
         self.curs.commit()
 
     def error(self,error):
-        self.curs.execute("EXEC dbo.Plog_error {id}, '{descr}'".format(id=self.id, descr = error))
+        self.curs.execute("EXEC dbo.Plog_error {id}, {descr}".format(id=self.id, descr = to_sql_str(error)))
         self.curs.commit()
 
 logger = Logger("test_1")
@@ -33,17 +38,17 @@ class Connection:
         self.params = {}
 
     def from_exec(self,d):
-        sql_str = ""
+        sql_str = "BAM!"
         if "exec_sql" in d:
             try:
                 sql_str = open(d["exec_sql"]).read()
             except Exception as e:
                 logger.error(e)
                 raise
-        elif "exec_str" in d:
-            sql_str = d["exec_str"]
+        elif "exec_txt" in d:
+            sql_str = d["exec_txt"]
         try:
-            sql_str.format(**self.params)
+            sql_str = sql_str.format(**self.params)
         except Exception as e:
             logger.error(e)
             raise
@@ -60,7 +65,7 @@ class Connection:
                 for r in curs.description:
                     res.update({r[0]: rs[i]})
                     i += 1
-            return rs
+            return res
         except Exception as e:
             logger.error(e)
             raise
@@ -75,12 +80,14 @@ class Connection:
             res = {}
             if "to" in j:
                 wt = w.get(j["to"], (None,None))
-                w.update({j["to"]: (wt[0],self)})
+                w.update({j["to"]: (self,wt[1])})
                 self.is_wait = True
+                self.jobs.insert(0,j)
             elif "from" in j:
                 wt = w.get(j["from"], (None, None))
-                w.update({j["from"]: (self, wt[1])})
+                w.update({j["from"]: (wt[0],self)})
                 self.is_wait = True
+                self.jobs.insert(0, j)
             else:
                 logger.log(str(j))
                 sql_str = self.from_exec(j)
@@ -89,12 +96,12 @@ class Connection:
                 if "output" in j:
                     for r, rn in res.items():
                         if r in j["output"]:
-                            self.params = self.params.update({r: rn})
+                            self.params.update({r: rn})
 
 
     def run_with(self, c2):
         j_from = self.jobs.pop(0)
-        j_to = self.jobs.pop(0)
+        j_to = c2.jobs.pop(0)
         if "into" in j_to:
             sql1 = self.from_exec(j_from)
             if sql1:
@@ -102,12 +109,12 @@ class Connection:
                 try:
                     curs = self.conn.cursor()
                     curs.execute(sql1)
-                    curs.commit()
                     par = ", ".join(["?" for r in curs.description])
                     sql2 = " INSERT INTO {0} VALUES ({1})".format(j_to["into"],par)
                     curs2 = c2.conn.cursor()
-                    curs2.executemany(sql2, curs.fetchmany())
+                    curs2.executemany(sql2, curs.fetchmany(900))
                     curs2.commit()
+                    curs.commit()
                 except Exception as e:
                     logger.error(e)
                     raise
@@ -123,29 +130,16 @@ def main():
     for o in cfg:
         cns.append(Connection(o))
     waits = {}
-    while all([x.is_ended for x in cns]):
+    while not all([x.is_ended for x in cns]):
         cr = [cn for cn in cns if not cn.is_ended and not cn.is_wait][0]
         cr.run(waits)
-        for wtn, wts in waits.items():
+        wats = [(wtn,wts) for wtn, wts in waits.items() if wts[0] and wts[1]]
+        for wtn, wts in wats:
             if wts[0] and wts[1]:
                 wts[0].run_with(wts[1])
+                waits.pop(wtn)
+    logger.end()
 
-
-    try:
-        for o in cfg:
-            conn = pyodbc.connect(o["connection"])
-            for j in cfg["jobs"]:
-                curs = conn.cursor()
-            if "exec" in o:
-                logger.log(o["exec"])
-                with open(o["exec"]) as f_exec:
-                    str = f_exec.read()
-                    curs.execute(str)
-                    curs.commit()
-        logger.end()
-    except Exception as e:
-        logger.error(e)
-        raise
 
 if __name__ == "__main__":
     main()
