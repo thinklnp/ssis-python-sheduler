@@ -144,6 +144,6 @@ def main():
 
 
 if __name__ == "__main__":
-    if sys.argv[0] > 0:
+    if len(sys.argv) > 1:
         os.chdir(sys.argv[1])
     main()
