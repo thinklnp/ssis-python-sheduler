@@ -28,7 +28,6 @@ class Logger:
         self.curs.execute("EXEC dbo.Plog_error {id}, {descr}".format(id=self.id, descr = to_sql_str(error)))
         self.curs.commit()
 
-logger = Logger("test_1")
 
 
 class Connection:
@@ -146,4 +145,7 @@ def main():
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         os.chdir(sys.argv[1])
+        logger = Logger(sys.argv[1])
+    else:
+        logger = Logger(sys.argv[0])
     main()
