@@ -1,5 +1,7 @@
 import pyodbc
 import json
+import sys
+import os
 
 
 def to_sql_str(s):
@@ -142,4 +144,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[0] > 0:
+        os.chdir(sys.argv[1])
     main()
